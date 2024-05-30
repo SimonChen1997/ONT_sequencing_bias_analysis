@@ -1,0 +1,158 @@
+#!/bin/bash -l
+#SBATCH --job-name="0p1coverage_minimap2_fasta_bias"
+#SBATCH -o 0p1coverage_minimap2_fasta_bias.o
+#SBATCH -e 0p1coverage_minimap2_fasta_bias.e
+
+#########################################################################################
+LSK_fastq=/path/
+RBK_fastq=/path/
+LSK_subsample=/path/
+RBK_subsample=/path/
+LSK_alignment=/path/
+RBK_alignment=/path/
+LSK_bed=/path/
+RBK_bed=/path/
+LSK_fasta=/path/
+RBK_fasta=/path/
+LSK_cleavage=/path/
+RBK_cleavage=/path/
+reference=/path/ARS-UCD1.2/GCF_002263795.1_ARS-UCD1.2_refseq_chrids.fa
+
+#########################################################################################
+module load anaconda3
+
+#########################################################################################
+### subsample the data
+cd $LSK_fastq
+source activate rasusa
+
+for file in *.fastq
+do
+	rasusa --input $file --bases 0.3gb -s 1500 -o $LSK_subsample/LSK_0p1x${file%%.*}.fastq
+done
+
+cd $RBK_fastq
+for file in *.fastq
+do
+	rasusa --input $file --bases 0.3gb -s 1500 -o $RBK_subsample/RBK_0p1x${file%%.*}.fastq
+done
+
+#########################################################################################
+#### minimap2 alignment for subsampled LSK data
+cd $LSK_subsample
+source activate minimap2
+for file in *.fastq
+do
+	rg_tag=${file%%.*}
+	minimap2 -R "@RG\tID:$rg_tag\tSM:$rg_tag\tLB:LSK114\tPL:nanopore" \
+	-ax map-ont $reference \
+	$file -t 90 -o $LSK_alignment/${file%%.*}.sam
+done
+
+#### minimap2 alignment for subsampled RBK data
+cd $RBK_subsample
+for file in *.fastq
+do
+	rg_tag=${file%%.*}
+	minimap2 -R "@RG\tID:$rg_tag\tSM:$rg_tag\tLB:RBK110\tPL:nanopore" \
+	-ax map-ont $reference \
+	$file -t 90 -o $RBK_alignment/${file%%.*}.sam
+done
+
+#########################################################################################
+### generate plus and minus bed files LSK data
+cd $LSK_alignment
+module load samtools
+module load bedtools/2.30.0-gcc-10.3.0
+for file in *.sam
+do
+	samtools view -F 0x900 -F 16 -F 4 -h  $file > ${file%%.*}_plus.sam ## extract forward sequences
+	samtools view -f 16 -h $file > ${file%%.*}_minus.sam ## extract reverse compliment  sequences
+	bedtools bamtobed -i ${file%%.*}_plus.sam > ${file%%.*}_plus.bed
+	bedtools bamtobed -i ${file%%.*}_minus.sam > ${file%%.*}_minus.bed
+done
+
+mv *.bed $LSK_bed
+
+### generate plus and minus bed files RBK data
+cd $RBK_alignment
+for file in *.sam
+do
+	samtools view -F 0x900 -F 16 -F 4 -h  $file > ${file%%.*}_plus.sam
+	samtools view -f 16 -h $file > ${file%%.*}_minus.sam
+	bedtools bamtobed -i ${file%%.*}_plus.sam > ${file%%.*}_plus.bed
+	bedtools bamtobed -i ${file%%.*}_minus.sam > ${file%%.*}_minus.bed
+done
+
+mv *.bed $RBK_bed
+
+#########################################################################################
+### extract fasta reads for LSK data
+cd $LSK_bed
+source activate seqkit
+for file in *_plus.bed
+do
+	echo "now is processing $file"
+	awk '{$2 = $2 - 15; print}' $file | \ # locate the upstream position
+	awk '{OFS="\t";} {$3 = $2 + 31; print}' | \ # locate the downstream position
+	awk -v threshold=31 '($2 >= 0) && ($3 >= 0) && (($3 - $2) >= threshold)' | \
+	fastaFromBed -fi $reference -bed stdin -fo stdout | \
+	seqkit seq -u > ${file%%.*}.fasta
+done
+
+for file in *_minus.bed
+do
+	echo "now is processing $file"
+	awk '{$2 = $3 - 16; print}' $file | \
+	awk '{OFS="\t";} {$3 = $2 + 31; print}' | \
+	awk -v threshold=31 '($2 >= 0) && ($3 >= 0) && (($3 - $2) >= threshold)' | \
+	fastaFromBed -fi $reference -bed stdin -fo stdout | \
+	seqkit seq -u > ${file%%.*}.fasta
+done
+
+for file in *_minus.fasta
+do
+	seqkit seq --complement --reverse -v -t DNA $file > ${file%%.*}_RC.fasta
+done
+
+cat *_plus.fasta *_RC.fasta > LSK_TSU_0p1.fasta
+cp *_plus.fasta *_RC.fasta LSK_TSU_0p1.fasta $LSK_cleavage
+mv *.fasta $LSK_fasta
+
+### extract fasta reads for RBK data
+cd $RBK_bed
+for file in *_plus.bed
+do
+	echo "now is processing $file"
+	awk '{$2 = $2 - 15; print}' $file | \
+	awk '{OFS="\t";} {$3 = $2 + 31; print}' | \
+	awk -v threshold=31 '($2 >= 0) && ($3 >= 0) && (($3 - $2) >= threshold)' | \
+	fastaFromBed -fi $reference -bed stdin -fo stdout | \
+	seqkit seq -u > ${file%%.*}.fasta
+done
+
+for file in *_minus.bed
+do
+	echo "now is processing $file"
+	awk '{$2 = $3 - 16; print}' $file | \
+	awk '{OFS="\t";} {$3 = $2 + 31; print}' | \
+	awk -v threshold=31 '($2 >= 0) && ($3 >= 0) && (($3 - $2) >= threshold)' | \
+	fastaFromBed -fi $reference -bed stdin -fo stdout | \
+	seqkit seq -u > ${file%%.*}.fasta
+done
+
+for file in *_minus.fasta
+do
+	seqkit seq --complement --reverse -v -t DNA $file > ${file%%.*}_RC.fasta
+done
+
+cat *_plus.fasta *_RC.fasta > RBK_TSU_0p1.fasta
+cp *_plus.fasta *_RC.fasta RBK_TSU_0p1.fasta $RBK_cleavage
+mv *.fasta $RBK_fasta
+
+#########################################################################################
+### Percentage calculation
+
+cd /scratch/project/genoepic_rumen
+python Nucleotides_Percentage_v3.py --path $LSK_cleavage --long 31
+python Nucleotides_Percentage_v3.py --path $RBK_cleavage --long 31

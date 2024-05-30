@@ -1,0 +1,19 @@
+#!/bin/bash -l
+#SBATCH --job-name="Reference_Background_Frequency"
+#SBATCH -o Reference_Background_Frequency.o
+#SBATCH -e Reference_Background_Frequency.e
+
+#######################################################
+reference=/path/ARS-UCD1.2/GCF_002263795.1_ARS-UCD1.2_refseq_chrids.fa
+
+#######################################################
+module load anaconda3
+
+#######################################################
+source activate seqkit
+for file in *.fna
+do
+	seqkit fx2tab $file | awk 'BEGIN { OFS = "\t"; print "Base", "Frequency"; total = 0; A = 0; C = 0; G = 0; T = 0; }
+	{ total += length($2); A += gsub("[Aa]", "", $2); C += gsub("[Cc]", "", $2); G += gsub("[Gg]", "", $2); T += gsub("[Tt]", "", $2); }
+	END { printf("A\t%.6f\n", (A / total)); printf("C\t%.6f\n", (C / total)); printf("G\t%.6f\n", (G / total)); printf("T\t%.6f\n", (T / total)); }' > ${file%%.*}_nucleotide_frequency.tsv
+done
