@@ -1,0 +1,16 @@
+#!/bin/bash -l
+#SBATCH --job-name="rumen_kraken-biom"
+#SBATCH -o rumen_kraken-biom.o
+#SBATCH -e rumen_kraken-biom.e
+
+##############################################################
+kraken2_report_dir=/path/
+
+##############################################################
+module load anaconda3
+
+##############################################################
+cd $kraken2_report_dir
+source activate kraken-biom
+
+kraken-biom *.report --max D --min S --fmt json -o rumen_microbiome_dna_seq.biom

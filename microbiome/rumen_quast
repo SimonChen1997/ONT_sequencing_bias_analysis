@@ -1,0 +1,36 @@
+#!/bin/bash -l
+#SBATCH --job-name="rumen_quast"
+#SBATCH -o rumen_quast.o
+#SBATCH -e rumen_quast.e
+#SBATCH --account=a_eross
+
+##############################################################
+results=/path/
+flye_folder=/path/
+quast_folder=/path/
+
+##############################################################
+## load necessary module
+module load anaconda3
+
+##############################################################
+## quast to evaluate data
+cd $flye_folder
+source activate quast
+
+## lsk data
+for i in {16702,16703,16717} code01 code02 code03 code04;
+do
+	cd lsk_${i}
+	quast assembly.fasta -t 20 -o $quast_folder/lsk_${i}_quast
+	cd ..
+done
+
+## rbk data
+cd $flye_folder
+for i in {16702,16703,16717} code01 code02 code03 code04;
+do
+	cd rbk_${i}
+	quast assembly.fasta -t 20 -o $quast_folder/rbk_${i}_quast
+	cd ..
+done

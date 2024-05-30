@@ -1,0 +1,106 @@
+#!/bin/bash -l
+#SBATCH --job-name="rumen_kraken_biom_metadata"
+#SBATCH -o rumen_kraken_biom_metadata.o
+#SBATCH -e rumen_kraken_biom_metadata.e
+
+##############################################################
+report_all_dir=/path/
+
+##############################################################
+cd $report_all_dir
+echo -e "sample_name\textraction_kit\tsequencing_kit\tbasecall_mode\tclassified_read\tlocation" > metadata.tsv
+
+for file in *.report; do
+    sample_name="${file%%.*}"
+    if [[ "$file" == *_es.report ]]; then
+        location="Spain"
+        extraction_kit="PowerSoil"
+        if [[ "$file" == *lsk*.report ]]; then
+            sequencing_kit="Ligation_kit"
+            if [[ "$file" == *fa*.report ]]; then
+                basecall_mode="FAST"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *hac*.report ]]; then
+                basecall_mode="HAC"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *sup*.report ]]; then
+                basecall_mode="SUP"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            fi
+            echo -e "$sample_name\t$extraction_kit\t$sequencing_kit\t$basecall_mode\t$classified\t$location" >> metadata.tsv
+        elif [[ "$file" == *rbk*.report ]]; then
+            sequencing_kit="Rapid_kit"
+            if [[ "$file" == *fa*.report ]]; then
+                basecall_mode="FAST"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *hac*.report ]]; then
+                basecall_mode="HAC"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *sup*.report ]]; then
+                basecall_mode="SUP"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            fi
+            echo -e "$sample_name\t$extraction_kit\t$sequencing_kit\t$basecall_mode\t$classified\t$location" >> metadata.tsv
+        fi
+    elif [[ "$file" == *_au.report ]]; then
+        location="Australia"
+        if [[ "$file" == puregene*.report ]]; then
+            extraction_kit="Puregene"
+            sequencing_kit="Ligation_kit"
+            if [[ "$file" == *fa*.report ]]; then
+                basecall_mode="FAST"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *hac*.report ]]; then
+                basecall_mode="HAC"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *sup*.report ]]; then
+                basecall_mode="SUP"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            fi
+            echo -e "$sample_name\t$extraction_kit\t$sequencing_kit\t$basecall_mode\t$classified\t$location" >> metadata.tsv
+        elif [[ "$file" == dneasy*.report ]]; then
+            extraction_kit="Dneasy"
+            sequencing_kit="Ligation_kit"
+            if [[ "$file" == *fa*.report ]]; then
+                basecall_mode="FAST"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *hac*.report ]]; then
+                basecall_mode="HAC"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            elif [[ "$file" == *sup*.report ]]; then
+                basecall_mode="SUP"
+                classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+            fi
+            echo -e "$sample_name\t$extraction_kit\t$sequencing_kit\t$basecall_mode\t$classified\t$location" >> metadata.tsv
+        elif [[ "$file" == powerfecal*.report ]]; then
+            extraction_kit="PowerFecal"
+            if [[ "$file" == *lsk*.report ]]; then
+                sequencing_kit="Ligation_kit"
+                if [[ "$file" == *fa*.report ]]; then
+                    basecall_mode="FAST"
+                    classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+                elif [[ "$file" == *hac*.report ]]; then
+                    basecall_mode="HAC"
+                    classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+                elif [[ "$file" == *sup*.report ]]; then
+                    basecall_mode="SUP"
+                    classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+                fi
+                echo -e "$sample_name\t$extraction_kit\t$sequencing_kit\t$basecall_mode\t$classified\t$location" >> metadata.tsv
+            elif [[ "$file" == *rbk*.report ]]; then
+                sequencing_kit="Rapid_kit"
+                if [[ "$file" == *fa*.report ]]; then
+                    basecall_mode="FAST"
+                    classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+                elif [[ "$file" == *hac*.report ]]; then
+                    basecall_mode="HAC"
+                    classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+                elif [[ "$file" == *sup*.report ]]; then
+                    basecall_mode="SUP"
+                    classified=$(awk '{IFS=OFS="\t"} NR==2 {print $1}' $file)
+                fi
+                echo -e "$sample_name\t$extraction_kit\t$sequencing_kit\t$basecall_mode\t$classified\t$location" >> metadata.tsv
+            fi
+        fi
+    fi
+done
