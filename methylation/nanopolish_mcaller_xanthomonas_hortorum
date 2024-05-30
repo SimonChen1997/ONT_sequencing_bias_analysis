@@ -1,0 +1,105 @@
+#!/bin/bash -l
+#SBATCH --job-name="nanopolish_mcaller_xanthomonas_hortorum"
+#SBATCH -o nanopolish_mcaller_xanthomonas_hortorum.o
+#SBATCH -e nanopolish_mcaller_xanthomonas_hortorum.e
+
+#########################################################
+fastq_path=/path/
+
+ref=/path/xanthomonas_hortorum_ref/GCF_002285515.1_ASM228551v1_genomic.fna
+mapping=/path/
+eventalign=/path/
+mcaller_tsv=/path/
+mcaller_eventalign=/path/
+
+model_path=/path/mCaller/
+mCaller=/path/mCaller.py
+makebed=/path/make_bed.py
+
+#########################################################
+### index fast5 files
+module load anaconda3
+source activate nanopolish
+
+for i in 02 03 17; 
+do
+	liz_fsat5_path_lsk=/path/lsk_167${i}
+	liz_fsat5_path_rbk=/path/rbk_167${i}
+	nanopolish index -d $liz_fsat5_path_lsk $fastq_path/lsk_167${i}.fastq
+	nanopolish index -d $liz_fsat5_path_rbk $fastq_path/rbk_167${i}.fastq
+done
+
+
+for i in {01..04};
+do
+	oscar_fsat5_path_lsk=/path/lsk_code${i}
+	oscar_fsat5_path_rbk=/path/rbk_code${i}
+	nanopolish index -d $oscar_fsat5_path_lsk $fastq_path/lsk_code${i}.fastq
+	nanopolish index -d $oscar_fsat5_path_rbk $fastq_path/rbk_code${i}.fastq
+done
+
+#########################################################
+### minimap2 mapping
+source activate minimap2
+
+cd $fastq_path
+for file in *.fastq;
+do
+	minimap2 -ax map-ont $ref \
+	$file -t 22 -o $mapping/${file%%.*}.sam
+done
+
+#########################################################
+### samtools indexing
+module load samtools
+
+cd $mapping
+for file in *.sam;
+do
+	samtools view -bS $file | samtools sort -T /tmp/${file%%.*}.sorted -o ${file%%.*}.sorted.bam
+	samtools index ${file%%.*}.sorted.bam
+done
+
+#########################################################
+### nanopolish eventalign
+source activate nanopolish
+
+cd $mapping
+for file in *.sam; 
+do
+	filename=${file%%.*}
+	nanopolish eventalign -t 22 --scale-events -n -r $fastq_path/${filename}.fastq -b $mapping/${filename}.sorted.bam -g $ref \
+	> $eventalign/${filename}.eventalign.tsv
+done
+
+#########################################################
+### mcaller detection
+source activate mcaller
+
+cd $eventalign
+for file in *.eventalign.tsv; 
+do
+	filename=${file%%.*}
+	python $mCaller -m GATC \
+	-r $ref -d $model_path/r95_twobase_model_NN_6_m6A.pkl \
+	-e $eventalign/${filename}.eventalign.tsv -f $fastq_path/${filename}.fastq -b A
+done
+
+#########################################################
+### tansform the mcaller output file
+cd $eventalign
+mv *.eventalign.diffs.6 $mcaller_eventalign
+
+cd $mcaller_eventalign
+for file in lsk_*.eventalign.*;
+do
+    awk -v filename=${file%%.*} -v kit="Ligation_kit" 'BEGIN{FS=OFS="\t"}''{print filename, kit, $0}' $file > ${file%%.*}.tsv
+done
+
+for file in rbk_*.eventalign.*;
+do
+    awk -v filename=${file%%.*} -v kit="Rapid_kit" 'BEGIN{FS=OFS="\t"}''{print filename, kit, $0}' $file > ${file%%.*}.tsv
+done
+
+cat lsk_*.tsv > $mcaller_tsv/lsk_xanthomonas_hortorum.tsv
+cat rbk_*.tsv > $mcaller_tsv/rbk_xanthomonas_hortorum.tsv
