@@ -1,0 +1,42 @@
+#!/bin/bash -l
+#SBATCH --job-name="rumen_quast_extract"
+#SBATCH -o rumen_quast_extract.o
+#SBATCH -e rumen_quast_extract.e
+
+##############################################################
+quast_folder=/path/
+output_tsv=/path/lsk_rbk_quast_info.tsv
+
+##############################################################
+## load necessary module
+module load anaconda3
+
+##############################################################
+## lsk data
+cd $quast_folder
+for i in {16702,16703,16717} code01 code02 code03 code04;
+do
+	cd lsk_${i}_quast
+	sample_id="lsk_${i}"
+	kit="Ligation_kit"
+	contig_number=$(cat report.tsv | awk 'BEGIN{FS=PFS="\t"} NR == 14 {print $2}')
+	n50=$(cat report.tsv | awk 'BEGIN{FS=PFS="\t"} NR == 18 {print $2}')
+	echo -e "$sample_id\t$kit\t$contig_number\t$n50" >> $output_tsv
+	cd ..
+done
+
+## rbk data
+cd $quast_folder
+for i in {16702,16703,16717} code01 code02 code03 code04;
+do
+	cd rbk_${i}_quast
+	sample_id="rbk_${i}"
+	kit="Rapid_kit"
+	contig_number=$(cat report.tsv | awk 'BEGIN{FS=PFS="\t"} NR == 14 {print $2}')
+	n50=$(cat report.tsv | awk 'BEGIN{FS=PFS="\t"} NR == 18 {print $2}')
+	echo -e "$sample_id\t$kit\t$contig_number\t$n50" >> $output_tsv
+	cd ..
+done
+
+
+

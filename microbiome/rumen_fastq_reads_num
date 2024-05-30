@@ -1,0 +1,95 @@
+#!/bin/bash -l
+#SBATCH --job-name="rumen_fastq_reads_number"
+#SBATCH -o rumen_fastq_reads_number.o
+#SBATCH -e rumen_fastq_reads_number.e
+#SBATCH --account=a_eross
+
+##############################################################
+nanofilt_dir_seq_fa=/path/fa/nanofilt
+nanofilt_dir_seq_hac=/path/hac/nanofilt
+nanofilt_dir_seq_sup=/path/sup/nanofilt
+
+nanofilt_dir_dna_fa=/path/fa/nanofilt 
+nanofilt_dir_dna_hac=/path/hac/nanofilt
+nanofilt_dir_dna_sup=/path/sup/nanofilt
+
+stats_dir=/path/
+
+##############################################################
+### calculate read num
+module load anaconda3
+source activate seqkit
+
+cd $stats_dir
+### calculate read number for seq data
+echo -e "sample_id\textraction_kit\tsequencing_kit\tbasecall_mode\tlocation\traw_reads\tafter_reads" > rumen_reads_num_stats.tsv
+for i in fa hac sup; do
+    raw_fastq_dir=/path/${i}/raw_fastq
+    trim_fastq_dir=/path/${i}/nanofilt
+    for file in $raw_fastq_dir/*.fastq; do
+        sample_id1="${file##*/}"
+        if [[ "$sample_id1" == *_es.fastq ]]; then
+            location="Spain"
+        elif [[ "$sample_id1" == *_au.fastq ]]; then
+            location="Australia"
+        fi
+        if [[ "$sample_id1" == *lsk*.fastq ]]; then
+            sequencing_kit="Ligation_kit"
+        elif [[ "$sample_id1" == *rbk*.fastq ]]; then
+            sequencing_kit="Rapid_kit"
+        fi
+        if [[ "$sample_id1" == *_fa_*.fastq ]]; then
+            mode="FAST"
+        elif [[ "$sample_id1" == *_hac_*.fastq ]]; then
+            mode="HAC"
+        elif [[ "$sample_id1" == *_sup_*.fastq ]]; then
+            mode="SUP"
+        fi
+        if [[ "$sample_id1" == *powerfecal*.fastq ]]; then
+            extraction_kit="PowerFecal"
+        elif [[ "$sample_id1" == *powersoil*.fastq ]]; then
+            extraction_kit="Powersoil"
+        fi
+        sample_id2="${sample_id1%%.*}"
+        before_reads=$(seqkit stats $file | awk 'BEGIN{IFS="\t"} NR==2 {print $4}')
+        after_reads=$(seqkit stats $trim_fastq_dir/$sample_id1 | awk 'BEGIN{IFS="\t"} NR==2 {print $4}')
+        echo -e "$sample_id2\t$extraction_kit\t$sequencing_kit\t$mode\t$location\t$before_reads\t$after_reads" >> $stats_dir/rumen_reads_num_stats.tsv
+        echo "${sample_id1} is finished"
+    done
+done
+
+ ### calculate read number for dna data
+for i in fa hac sup; do
+    raw_fastq_dir=/path/${i}/raw_fastq
+    trim_fastq_dir=/path/${i}/nanofilt
+    for file in $raw_fastq_dir/*.fastq; do
+        sample_id1="${file##*/}"
+        if [[ "$sample_id1" == *_es.fastq ]]; then
+            location="Spain"
+        elif [[ "$sample_id1" == *_au.fastq ]]; then
+            location="Australia"
+        fi
+        if [[ "$sample_id1" == *lsk*.fastq ]]; then
+            sequencing_kit="Ligation_kit"
+        elif [[ "$sample_id1" == *rbk*.fastq ]]; then
+            sequencing_kit="Rapid_kit"
+        fi
+        if [[ "$sample_id1" == *_fa_*.fastq ]]; then
+            mode="FAST"
+        elif [[ "$sample_id1" == *_hac_*.fastq ]]; then
+            mode="HAC"
+        elif [[ "$sample_id1" == *_sup_*.fastq ]]; then
+            mode="SUP"
+        fi
+        if [[ "$sample_id1" == *dneasy*.fastq ]]; then
+            extraction_kit="Dneasy"
+        elif [[ "$sample_id1" == *puregene*.fastq ]]; then
+            extraction_kit="Puregene"
+        fi
+        sample_id2="${sample_id1%%.*}"
+        before_reads=$(seqkit stats $file | awk 'BEGIN{IFS="\t"} NR==2 {print $4}')
+        after_reads=$(seqkit stats $trim_fastq_dir/$sample_id1 | awk 'BEGIN{IFS="\t"} NR==2 {print $4}')
+        echo -e "$sample_id2\t$extraction_kit\t$sequencing_kit\t$mode\t$location\t$before_reads\t$after_reads" >> $stats_dir/rumen_reads_num_stats.tsv
+        echo "${sample_id1} is finished"
+    done
+done

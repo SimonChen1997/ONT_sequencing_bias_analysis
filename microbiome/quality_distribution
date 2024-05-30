@@ -1,0 +1,85 @@
+#!/bin/bash -l
+#SBATCH --job-name="quality_distribution"
+#SBATCH -o quality_distribution.o
+#SBATCH -e quality_distribution.e
+
+##############################################################
+module load anaconda3
+source activate seqkit
+
+##############################################################
+### calculate quality for seq data
+tsv_dir=/path/quality_distribution
+for i in fa hac sup; do
+    dir=/path/${i}/nanofilt
+    tsv_dir=/path/quality_distribution
+    for file in $dir/*.fastq; do
+        if [[ "$file" == *_es.fastq ]]; then
+            location="Spain"
+        elif [[ "$file" == *_au.fastq ]]; then
+            location="Australia"
+        fi
+        
+        if [[ "$file" == *lsk*.fastq ]]; then
+            sequencing_kit="Ligation_kit"
+        elif [[ "$file" == *rbk*.fastq ]]; then
+            sequencing_kit="Rapid_kit"
+        fi
+
+        if [[ "${i}" == "fa" ]]; then
+            mode="FAST"
+        elif [[ "${i}" == "hac" ]]; then
+            mode="HAC"
+        elif [[ "${i}" == "sup" ]]; then
+            mode="SUP"
+        fi
+
+        file_name1="${file%%.*}"
+        file_name2="${file_name1##*/}"
+        seqkit fx2tab -qin "$file" > $tsv_dir/${file_name2}_quality.tsv
+        awk -v var="${mode}" -v var2="${location}" -v var3="${sequencing_kit}" 'BEGIN{OFS="\t"}{print $0, var, var2, var3}' $tsv_dir/${file_name2}_quality.tsv > $tsv_dir/${file_name2}_quality_mode.tsv
+    done
+done
+
+cd $tsv_dir
+echo -e "read_id\tquality\tbasecall_mode\tlocation\tsequencing_kit" > rumen_fastq_seq_quality_distribution.tsv
+cat *_mode.tsv >> rumen_fastq_seq_quality_distribution.tsv
+
+
+### calculate quality for dna data
+sv_dir=/path/quality_distribution_dna
+for i in fa hac sup; do
+    dir=/path/${i}/nanofilt
+    tsv_dir=/path/quality_distribution_dna
+    for file in $dir/*.fastq; do
+        if [[ "$file" == *_es.fastq ]]; then
+            location="Spain"
+        elif [[ "$file" == *_au.fastq ]]; then
+            location="Australia"
+        fi
+        
+        if [[ "$file" == *dneasy*.fastq ]]; then
+            extraction_kit="Dneasy"
+        elif [[ "$file" == *puregene*.fastq ]]; then
+            extraction_kit="Puregene"
+        fi
+
+        if [[ "${i}" == "fa" ]]; then
+            mode="FAST"
+        elif [[ "${i}" == "hac" ]]; then
+            mode="HAC"
+        elif [[ "${i}" == "sup" ]]; then
+            mode="SUP"
+        fi
+
+        file_name1="${file%%.*}"
+        file_name2="${file_name1##*/}"
+        seqkit fx2tab -qin "$file" > $tsv_dir/${file_name2}_quality.tsv
+        awk -v var="${mode}" -v var2="${location}" -v var3="${extraction_kit}" 'BEGIN{OFS="\t"}{print $0, var, var2, var3}' $tsv_dir/${file_name2}_quality.tsv > $tsv_dir/${file_name2}_quality_mode.tsv
+    done
+done
+
+cd $tsv_dir
+echo -e "read_id\tquality\tbasecall_mode\tlocation\textraction_kit" > rumen_fastq_dna_quality_distribution.tsv
+
+cat *_mode.tsv >> rumen_fastq_dna_quality_distribution.tsv

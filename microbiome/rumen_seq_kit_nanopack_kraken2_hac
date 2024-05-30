@@ -1,0 +1,82 @@
+#!/bin/bash -l
+#SBATCH --job-name="rumen_seq_kit_nanopack_kraken2_hac"
+#SBATCH -o rumen_seq_kit_nanopack_kraken2_hac.o
+#SBATCH -e rumen_seq_kit_nanopack_kraken2_hac.e
+
+##############################################################
+rdm=/path/
+rdm_fastq=/path/
+project_fastq=/path/
+nanoplot_dir=/path/
+porechop_dir=/path/
+nanofilt_dir=/path/
+nanoplot_trim_dir=/path/
+kraken2_report_dir=/path/
+kraken2_all_dir=/path/
+ref_database=/path/
+
+##############################################################
+## load necessary module
+module load anaconda3
+
+##############################################################
+## nanoplot
+source activate nanopack
+cd $project_fastq
+for file in *.fastq;
+do
+	NanoPlot -t 24 --fastq $file --N50 -o $nanoplot_dir/${file%%.*}
+done
+cp -r $nanoplot_dir $rdm
+
+##############################################################
+## use porechop_api to trim adapters
+source activate porechop_abi
+cd $project_fastq
+for file in *.fastq;
+do 
+	porechop_abi -abi --threads 24 -i $file -o $porechop_dir/p_${file%%.*}.fastq
+done
+cp -r $porechop_dir $rdm
+
+##############################################################
+## use nanofilt to filter low quality reads
+cd $porechop_dir
+source activate nanopack
+for file in *.fastq;
+do
+	NanoFilt -q 9 --length 100 $file > $nanofilt_dir/f${file%%.*}.fastq
+done
+cp -r $nanofilt_dir $rdm
+
+##############################################################
+## use nanofilt_dir to redo the quality control
+cd $nanofilt_dir
+for file in *.fastq;
+do
+	NanoPlot -t 24 --fastq $file --N50 -o $nanoplot_trim_dir/${file%%.*}
+done
+cp -r $nanoplot_trim_dir $rdm
+
+##############################################################
+## change the file name nanofilted
+cd $nanofilt_dir
+for file in *.fastq;
+do
+  newname="${file#fp_}"
+  mv "$file" "$newname"
+done
+
+##############################################################
+## performance of kraken2 for data
+module load kraken2/2.1.2-gompi-2021a
+cd $nanofilt_dir
+for file in *.fastq
+do
+	kraken2 --db $ref_database --threads 24 $file --report ${file%%.*}.report > ${file%%.*}.tsv
+done
+
+cp *.report *.tsv  $kraken2_all_dir
+cp *.report $kraken2_report_dir
+cp -r $kraken2_all_dir $rdm
+cp -r $kraken2_report_dir $rdm

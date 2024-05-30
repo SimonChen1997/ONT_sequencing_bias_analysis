@@ -1,0 +1,54 @@
+#!/bin/bash -l
+#SBATCH --job-name="rumen_sample_N50"
+#SBATCH -o rumen_sample_N50.o
+#SBATCH -e rumen_sample_N50.e
+
+##############################################################
+nanofilt_dir_seq_fa=/path/fa/nanofilt
+nanofilt_dir_seq_hac=/path/hac/nanofilt
+nanofilt_dir_seq_sup=/path/sup/nanofilt
+
+nanofilt_dir_dna_fa=/path/fa/nanofilt 
+nanofilt_dir_dna_hac=/path/hac/nanofilt
+nanofilt_dir_dna_sup=/path/sup/nanofilt
+
+stats_dir=/path/
+
+##############################################################
+module load anaconda3
+
+##############################################################
+### calculate N50
+cd $stats_dir
+echo -e "sample_id\tN50_raw\tN50_trim" > rumen_read_stats.tsv
+
+### seq kit
+source activate seqkit
+for i in {fa,hac,sup}; do
+    raw_fastq_dir=/path/${i}/raw_fastq
+    trim_fastq_dir=/path/${i}/nanofilt
+    for file in $raw_fastq_dir/*.fastq; do
+        sample_id1="${file##*/}"
+        sample_id2="${sample_id1%%.*}"
+        value1=$(seqkit stats $file -a | awk 'BEGIN{OFS="\t"} NR==2 {print $13}')
+        value2=$(seqkit stats $trim_fastq_dir/$sample_id1 -a | awk 'BEGIN{OFS="\t"} NR==2 {print $13}')
+        echo -e "$sample_id2\t$value1\t$value2" >> "$stats_dir"/rumen_read_stats.tsv
+        echo "${sample_id1} is finished"
+    done
+done
+
+### dna kit
+for i in {fa,hac,sup}; do
+    raw_fastq_dir=/path/${i}/raw_fastq
+    trim_fastq_dir=/path/${i}/nanofilt
+    for file in $raw_fastq_dir/*.fastq; do
+        sample_id1="${file##*/}"
+        sample_id2="${sample_id1%%.*}"
+        value1=$(seqkit stats $file -a | awk 'BEGIN{OFS="\t"} NR==2 {print $13}')
+        value2=$(seqkit stats $trim_fastq_dir/$sample_id1 -a | awk 'BEGIN{OFS="\t"} NR==2 {print $13}')
+        echo -e "$sample_id2\t$value1\t$value2" >> "$stats_dir"/rumen_read_stats.tsv
+        echo "${sample_id1} is finished"
+    done
+done
+
+
