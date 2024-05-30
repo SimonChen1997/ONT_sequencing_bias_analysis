@@ -1,0 +1,83 @@
+#!/bin/bash -l
+#SBATCH --job-name="TSU_30_sequencing_depth"
+#SBATCH -o TSU_30_sequencing_depth.o
+#SBATCH -e TSU_30_sequencing_depth.e
+
+#######################################################
+module load anaconda3
+module load samtools
+
+#######################################################
+lsk_sam=/path/
+rbk_sam=/path/
+
+lsk_bam=/path/
+rbk_bam=/path/
+
+lsk_depth_folder=/path/
+rbk_depth_folder=/path/
+
+#######################################################
+## convert the sam to bam
+cd $lsk_sam
+for file in *.sam;
+do
+    samtools view -bhS $file | samtools sort -o ${file%%.*}.bam
+done
+
+for i in {01..15};
+do
+    samtools merge -n *_CODE${i}_plus.bam *_CODE${i}_minus.bam -o $lsk_bam/LSK_0p1xTSU_LSK114_CODE${i}_primary.bam
+done
+rm *.bam
+
+cd $rbk_sam
+
+output_file=rbk_prefix.tsv ## a prefix file help to combine data
+
+for file in *RBK*; do
+  if [[ -f "$file" ]]; then
+    prefix="${file%_*.sam}"
+    echo "$prefix" >> "$output_file"
+  fi
+done
+sort -u -o "$output_file" "$output_file"
+
+for file in *.sam;
+do
+    samtools view -bhS $file | samtools sort -o ${file%%.*}.bam
+done
+
+## sort the data and make it unique
+cat rbk_prefix.tsv | while read -r prefix;do samtools merge -n ${prefix}_plus.bam ${prefix}_minus.bam -o $rbk_bam/${prefix}_primary.bam;done
+rm *.bam
+
+#######################################################
+## sort and index the bam file
+cd $lsk_bam
+for file in *.bam;
+do
+    samtools sort -o sorted_${file%%.*}.bam $file
+    samtools index sorted_${file%%.*}.bam
+done
+
+cd $rbk_bam
+for file in *.bam;
+do
+    samtools sort -o sorted_${file%%.*}.bam $file
+    samtools index sorted_${file%%.*}.bam
+done
+
+#######################################################
+## use samtools to calculate the sequencing depth at each position at the reference genome
+cd $lsk_bam
+for file in sorted_*.bam;
+do
+	samtools depth $file > $lsk_depth_folder/${file%%.*}.depth
+done
+
+cd $rbk_bam
+for file in sorted_*.bam;
+do
+	samtools depth $file > $rbk_depth_folder/${file%%.*}.depth
+done

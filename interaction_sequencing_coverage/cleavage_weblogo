@@ -1,0 +1,35 @@
+#!/bin/bash -l
+#SBATCH --job-name="TSU_30_weblogo"
+#SBATCH -o TSU_30_weblogo.o
+#SBATCH -e TSU_30_weblogo.e
+
+#######################################################
+module load anaconda3
+
+#######################################################
+## path of extracted fasta
+lsk=/path/
+rbk=/path/
+weblogo_dir=/path/
+
+#######################################################
+## use weblogo to generate the motif
+source activate weblogo
+cd $lsk
+weblogo -f LSK_TSU_0p1.fasta -D fasta -o LSK_TSU_0p1.eps \
+-A 'dna' --color-scheme classic -F eps -Y YES -s large --yaxis 0.2 \
+--composition "{'A':29.00, 'C':20.96, 'G':20.97, 'T':29.06}" \ ## the background nucleotide frequency of the reference genome
+--annotate '-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15' \ # the x-axis label
+--number-fontsize 14 --rotate-numbers YES --errorbars NO \
+--fineprint '' --ylabel ''
+mv LSK_TSU_0p1.eps $weblogo_dir
+
+
+cd $rbk
+weblogo -f RBK_TSU_0p1.fasta -D fasta -o RBK_TSU_0p1.eps \
+-A 'dna' --color-scheme classic -F eps -Y YES -s large --yaxis 0.2 \
+--composition "{'A':29.00, 'C':20.96, 'G':20.97, 'T':29.06}" \ # the background nucleotide frequency of the reference genome
+--annotate '-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15' \ # the x-axis label
+--number-fontsize 14 --rotate-numbers YES --errorbars NO \
+--fineprint '' --ylabel ''
+mv RBK_TSU_0p1.eps $weblogo_dir

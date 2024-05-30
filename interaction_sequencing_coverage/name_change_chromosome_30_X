@@ -1,0 +1,26 @@
+#!/bin/bash -l
+#SBATCH --job-name="TSU_30_X_chromo_name"
+#SBATCH -o TSU_30_X_chromo_name.o
+#SBATCH -e TSU_30_X_chromo_name.e
+#SBATCH --account=a_eross
+
+#######################################################
+## define the folder in variables
+depth_folder=/path/
+insertion_folder=/path/
+
+#######################################################
+## change the X chromosome to 30 to accelerate the processing
+# interaction site
+cd $insertion_folder
+cp -r chr_X chr_30
+cd chr_30
+awk 'BEGIN {FS=OFS="\t"}{print 30,$2,$3,$4}' lsk_rbk_insertion_site_chrX.tsv > lsk_rbk_insertion_site_chr30.tsv
+awk 'BEGIN {FS=OFS="\t"}{print 30,$2,$3,$4}' reference_10kb_GC_chrX.tsv > reference_10kb_GC_chr30.tsv
+
+# sequencing depth
+cd $depth_folder
+cp -r chr_X chr_30
+cd chr_30
+awk 'BEGIN {FS=OFS="\t"}{print 30,$2,$3,$4,$5}' lsk_rbk_sequencing_depth_chrX.tsv > lsk_rbk_sequencing_depth_chr30.tsv
+awk 'BEGIN {FS=OFS="\t"}{print 30,$2,$3,$4}' reference_10kb_GC_chrX.tsv > reference_10kb_GC_chr30.tsv

@@ -1,0 +1,31 @@
+#!/bin/bash -l
+#SBATCH --job-name="TSU_30_X_chromo_name_rechange"
+#SBATCH -o TSU_30_X_chromo_name_rechange.o
+#SBATCH -e TSU_30_X_chromo_name_rechange.e
+
+#######################################################
+## define the folder in variables
+depth_folder=/path/
+insertion_folder=/path/
+
+#######################################################
+## change back the X chromosome name
+# interaction site
+cd $insertion_folder
+awk 'BEGIN{FS=OFS="\t"} NR==1 {print; next} $2 == "30" { $2 = "X" } 1' chr_30_insertion_gc_window_python.tsv > chr_X_insertion_gc_window_python.tsv
+
+for i in {1..29} X;
+do
+	awk 'BEGIN{FS=OFS="\t"} NR>1 {print$0}' chr_${i}_insertion_gc_window_python.tsv >> lsk_rbk_insertion_gc_window.tsv
+done
+
+
+# sequencing depth
+cd $depth_folder
+awk 'BEGIN{FS=OFS="\t"} NR==1 {print; next} $2 == "30" { $2 = "X" } 1' chr_30_depth_gc_window_python.tsv > chr_X_depth_gc_window_python.tsv
+
+
+for i in {1..29} X;
+do
+	awk 'BEGIN{FS=OFS="\t"} NR>1 {print$0}' chr_${i}_depth_gc_window_python.tsv >> lsk_rbk_depth_gc_window.tsv
+done

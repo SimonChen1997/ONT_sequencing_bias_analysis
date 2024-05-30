@@ -1,0 +1,68 @@
+#!/bin/bash -l
+#SBATCH --job-name="TSU_30_depth_interation_file_manipulation"
+#SBATCH -o TSU_30_depth_interation_file_manipulation.o
+#SBATCH -e TSU_30_depth_interation_file_manipulation.e
+
+#######################################################
+module load anaconda3
+module load samtools
+
+#######################################################
+lsk_depth=/path/
+rbk_depth=/path/
+
+depth_folder=/path/
+interaction_folder=/path/
+reference=/path/reference_10kb_GC.tsv
+
+#######################################################
+## change the name of bed file and make meta-tsv files
+cd $lsk_depth
+echo -e "sample_ID\treplicate" > file_name.tsv
+for file in *.depth; do echo ${file%%.*} | sort | uniq >> name.tsv; done
+awk 'BEGIN{FS=OFS="\t"} {print $0, "LSK114_R"NR}' name.tsv >> file_name.tsv
+tail -n +2 file_name.tsv | while IFS=$'\t' read -r old new;do mv "${old}.depth" "${new}.depth";done
+for file in *.depth;
+do
+    filename=${file%%.*}
+    kit="Ligation_kit"
+    awk 'BEGIN{FS=OFS="\t"} {print $0, filename, kit}' filename="$filename" kit="$kit" $file > tmp && mv tmp $file
+done
+cat *.depth > lsk_sequencing_depth.tsv
+mv lsk_sequencing_depth.tsv $depth_folder
+
+cd $rbk_depth
+echo -e "sample_ID\treplicate" > file_name.tsv
+for file in *.depth; do echo ${file%%.*} | sort | uniq >> name.tsv; done
+awk 'BEGIN{FS=OFS="\t"} {print $0, "RBK110_R"NR}' name.tsv >> file_name.tsv
+tail -n +2 file_name.tsv | while IFS=$'\t' read -r old new;do mv "${old}.depth" "${new}.depth";done
+for file in *.depth;
+do
+    filename=${file%%.*}
+    kit="Rapid_kit"
+    awk 'BEGIN{FS=OFS="\t"} {print $0, filename, kit}' filename="$filename" kit="$kit" $file > tmp && mv tmp $file
+done
+cat *.depth > rbk_sequencing_depth.tsv
+mv rbk_sequencing_depth.tsv $depth_folder
+
+#######################################################
+## separate the meta-tsv file into different chromosome folder
+cd $depth_folder
+
+cat lsk_sequencing_depth.tsv rbk_sequencing_depth.tsv > lsk_rbk_sequencing_depth.tsv
+
+for i in {1..29} X;
+do
+    value="$depth_folder/chr_${i}"
+    echo "now is processing chromosome$i"
+    awk -v chromosome="$i" 'BEGIN{FS="\t";OFS="\t"} $1==chromosome {print $0}' lsk_rbk_sequencing_depth.tsv > "${value}"/lsk_rbk_sequencing_depth_chr${i}.tsv
+done
+
+#######################################################
+## separate the reference into different folder based on chromsome
+
+for i in {1..29} X;
+do
+	awk -v chromo=$i 'BEGIN{FS=OFS="\t"} NR>1 && $1==chromo {print $0}' $reference > $depth_folder/chr_${i}/reference_10kb_GC_chr${i}.tsv
+	awk -v chromo=$i 'BEGIN{FS=OFS="\t"} NR>1 && $1==chromo {print $0}' $reference > $interaction_folder/chr_${i}/reference_10kb_GC_chr${i}.tsv
+done

@@ -1,0 +1,35 @@
+#!/bin/bash -l
+#SBATCH --job-name="ARS_UCD1_2_Sliding_Windows_10kb"
+#SBATCH -o ARS_UCD1_2_Sliding_Windows_10kb.o
+#SBATCH -e ARS_UCD1_2_Sliding_Windows_10kb.e
+
+############################################################################
+refernece_dir=/path/GCF_002263795.1_ARS-UCD1.2_refseq_chrids.fa
+reference_size=/scratch/project/genoepic_rumen/ARS-UCD1.2/GCF_002263795.1_ARS-UCD1.2_refseq_chrids_size.tsv
+
+############################################################################
+module load anaconda3
+module load bedtools/2.30.0-gcc-10.3.0
+
+############################################################################
+cd $reference_dir
+## use samtools to generate the overall information of the reference genome
+samtools faidx $refernece_dir/GCF_002263795.1_ARS-UCD1.2_refseq_chrids.fa
+
+## extract the chromosome name and genome length columns
+awk 'BEGIN{IFS=OFS="\t"}{print$1, $2}' GCF_002263795.1_ARS-UCD1.2_refseq_chrids.fa.fai > GCF_002263795.1_ARS-UCD1.2_refseq_chrids_size.tsv
+
+## use bed tools to crate windows of each chromosome with 10kb sliding windows
+bedtools makewindows -g $reference_size -w 10000 > ARS_UCD1.2_windows_10kb.bed
+
+#############################################################################################
+### generate a tsv file with AT percentage info
+
+bedtools nuc -fi $reference -bed $bedfile_10kb > reference_10kb_nucleotides_info.tsv
+
+#############################################################################################
+### extract the GC percentage info to a tsv file with header 
+
+echo -e "Chromosome\tStart\tEnd\tGC_Percentage" > reference_10kb_GC.tsv
+
+awk 'BEGIN{FS="\t";OFS="\t"}NR>1{$4=$4*100 ;print $1, $2, $3, $5}' reference_10kb_nucleotides_info.tsv >> reference_10kb_GC.tsv

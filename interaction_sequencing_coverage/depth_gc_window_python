@@ -1,0 +1,13 @@
+#!/bin/bash -l
+#SBATCH --job-name="TSU_30_depth_gc_window_python"
+#SBATCH -o TSU_30_depth_gc_window_python.o
+#SBATCH -e TSU_30_depth_gc_window_python.e
+
+##########################################
+folder=/path/
+
+##########################################
+## initiate a python script to finish the sequencing coverage calculation of each window frame
+module load anaconda3
+cd $folder
+python depth_gc_window.py
