@@ -1,5 +1,5 @@
 # ONT sequencing bias analysis
-This is a study to identify the sequencing biases of two Nanopore library preparation protocols, which are ligase-based and transposase-based. The study can be seperated into four sections 📝.
+This is a study to identify the sequencing biases of two Nanopore library preparation protocols, which are ligase-based and transposase-based. The study can be seperated into four sections 📝:
 
 
 **Section 1️⃣: enzyme recognition motif identification:**
