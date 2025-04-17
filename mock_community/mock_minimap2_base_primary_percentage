@@ -1,0 +1,73 @@
+#!/bin/bash -l
+#SBATCH --job-name="mock_minimap2_base_primary_percentage"
+#SBATCH -o mock_minimap2_base_primary_percentage.o
+#SBATCH -e mock_minimap2_base_primary_percentage.e
+
+##############################################################
+nanofilt_all=/path/
+primary_fastq_all=/path/
+
+nanofilt_ligation=/path/
+nanofilt_rapid=/path/
+
+minimap2_percentage=/path/
+
+##############################################################
+module load anaconda3
+module load samtools
+
+##############################################################
+### stats for base mapped percentage of methanogens
+echo -e "sample_id\tsequencing_kit\tmock_type\tgenus\ttechnical_replicate\tnanofilt_bsae_number\tprimary_base_number\tprimary_base_map_percentage" > $minimap2_percentage/mock_seq_bias_stat_base_primary_bam.tsv
+
+for file in $primary_fastq_all/*.fastq; do
+    name1=${file##*/}
+    name2=${name1%%.*}
+    name3=${name2%%_r*}
+    
+    if [[ ${name2} == b_pullorum_* ]]; then
+        common_name=${name2#b_pullorum_}
+    elif [[ ${name2} == e_coli_* ]]; then
+        common_name=${name2#e_coli_}
+    elif [[ ${name2} == l_acidophilus_* ]]; then
+        common_name=${name2#l_acidophilus_}
+    fi
+
+    sample_id=${name2}
+
+    if [[ ${name2} == l_acidophilus* ]]; then
+        genus="Lactobacillus"
+    elif [[ ${name2} == e_coli* ]]; then
+        genus="Escherichia"
+    elif [[ ${name2} == b_pullorum* ]]; then
+        genus="Bifidobacterium"
+    fi
+
+    if [[ ${name2} == *r1 ]]; then
+        technical_replicate="replicate_1"
+    elif [[ ${name2} == *r2 ]]; then
+        technical_replicate="replicate_2"
+    elif [[ ${name2} == *r3 ]]; then
+        technical_replicate="replicate_3"
+    fi
+
+    if [[ ${name2} == *mock_1* ]]; then
+        mock_type="mock_1"
+    elif [[ ${name2} == *mock_2* ]]; then
+        mock_type="mock_2"
+    fi
+
+    if [[ ${name2} == *ligation* ]]; then
+        sequencing_kit="Ligation_kit"
+    elif [[ ${name2} == *rapid* ]]; then
+        sequencing_kit="Rapid_kit"
+    fi
+    
+    nanofilt_base_number=$(awk 'NR%4==2 {base += length($0)} END {print base}' $nanofilt_all/${common_name}.fastq)
+    genus_base_number=$(awk 'NR%4==2 {base += length($0)} END {print base}' $file)
+    
+    genus_base_percentage=$(awk -v genus_base_number=$genus_base_number -v nanofilt_base_number=$nanofilt_base_number 'BEGIN {printf "%.4f", (genus_base_number / nanofilt_base_number) * 100}')
+    echo -e "$sample_id\t$sequencing_kit\t$mock_type\t$genus\t$technical_replicate\t$nanofilt_base_number\t$genus_base_number\t$genus_base_percentage" >> $minimap2_percentage/mock_seq_bias_stat_base_primary_bam.tsv
+done
+
+echo "Jod id is: $SLURM_JOBID"

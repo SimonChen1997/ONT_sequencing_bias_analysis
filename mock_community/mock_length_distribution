@@ -1,0 +1,88 @@
+#!/bin/bash -l
+#SBATCH --job-name="mock_length_distribution"
+#SBATCH -o mock_length_distribution.o
+#SBATCH -e mock_length_distribution.e
+
+##############################################################
+primary_fastq_all=/path/
+minimap2_primary_all=/path/
+
+ligation_b_pullorum_primary_fastq=/path/
+ligation_e_coli_primary_fastq=/path/
+ligation_l_acidophilus_primary_fastq=/path/
+
+rapid_b_pullorum_primary_fastq=/path/
+rapid_e_coli_primary_fastq=/path/
+rapid_l_acidophilus_primary_fastq=/path/
+
+length_distribution=/path/
+
+##############################################################
+### copy files to one directory
+cp $ligation_b_pullorum_primary_fastq/*.fastq $ligation_e_coli_primary_fastq/*.fastq $ligation_l_acidophilus_primary_fastq/*.fastq $primary_fastq_all
+cp $rapid_b_pullorum_primary_fastq/*.fastq $rapid_e_coli_primary_fastq/*.fastq $rapid_l_acidophilus_primary_fastq/*.fastq $primary_fastq_all
+
+##############################################################
+module load anaconda3
+module load samtools
+
+##############################################################
+### calculate the read length distribution of each file
+source activate seqkit
+
+for file in $primary_fastq_all/*.fastq; do
+    name1=${file##*/}
+    name2=${name1%%.*}
+    name3=${name2%%_r*}
+
+    sample_id=${name2}
+
+    if [[ ${name2} == l_acidophilus* ]]; then
+        genus="Lactobacillus"
+    elif [[ ${name2} == e_coli* ]]; then
+        genus="Escherichia"
+    elif [[ ${name2} == b_pullorum* ]]; then
+        genus="Bifidobacterium"
+    fi
+
+    if [[ ${name2} == *r1 ]]; then
+        technical_replicate="replicate_1"
+    elif [[ ${name2} == *r2 ]]; then
+        technical_replicate="replicate_2"
+    elif [[ ${name2} == *r3 ]]; then
+        technical_replicate="replicate_3"
+    fi
+
+    if [[ ${name2} == *mock_1* ]]; then
+        mock_type="mock_1"
+    elif [[ ${name2} == *mock_2* ]]; then
+        mock_type="mock_2"
+    fi
+
+    if [[ ${name2} == *ligation* ]]; then
+        sequencing_kit="Ligation_kit"
+    elif [[ ${name2} == *rapid* ]]; then
+        sequencing_kit="Rapid_kit"
+    fi
+
+    seqkit fx2tab -qinl $file > $length_distribution/${name2}_quality_length.tsv
+
+    awk -v sequencing_kit="${sequencing_kit}" \
+        -v sample_id="${sample_id}" \
+        -v mock_type="${mock_type}" \
+        -v genus="${genus}" \
+        -v technical_replicate="${technical_replicate}" \
+        'BEGIN {OFS="\t"} {print $0, sequencing_kit, sample_id, mock_type, genus, technical_replicate}' \
+        $length_distribution/${name2}_quality_length.tsv \
+        > $length_distribution/${name2}_quality_length_mode.tsv
+done
+
+##############################################################
+### combine all tsv files
+
+echo -e "read_id\tlength\tquality\tsequencing_kit\tsample_id\tmock_type\tgenus\ttechnical_replicate" \
+> $length_distribution/mock_seq_bias_quality_length_distribution.tsv
+
+cat $length_distribution/*_mode.tsv >> $length_distribution/mock_seq_bias_quality_length_distribution.tsv
+
+echo "Jod id is: $SLURM_JOBID"

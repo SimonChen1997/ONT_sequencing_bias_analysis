@@ -1,0 +1,67 @@
+#!/bin/bash -l
+#SBATCH --job-name="mock_minimap2_primary_percentage"
+#SBATCH -o mock_minimap2_primary_percentage.o
+#SBATCH -e mock_minimap2_primary_percentage.e
+
+##############################################################
+minimap2_primary_all=/path/
+
+ligation_b_pullorum_minimap2=/path/
+ligation_e_coli_minimap2=/path/
+ligation_l_acidophilus_minimap2=/path/
+
+rapid_b_pullorum_minimap2=/path/
+rapid_e_coli_minimap2=/path/
+rapid_l_acidophilus_minimap2=/path/
+
+minimap2_percentage=/path/
+
+##############################################################
+module load anaconda3
+module load samtools
+
+##############################################################
+### samtools for stats for read mapped percentage of methanogens
+echo -e "sample_id\tsequencing_kit\tmock_type\tgenus\ttechnical_replicate\tmap_percentage\tprimary_map_percentage" > $minimap2_percentage/mock_seq_bias_stat_read_primary_bam.tsv
+
+for file in $minimap2_primary_all/*.bam; do
+    name1=${file##*/}
+    name2=${name1%%.*}
+    name3=${name2%%_r*}
+
+    sample_id=${name2}
+
+    if [[ ${name2} == l_acidophilus* ]]; then
+        genus="Lactobacillus"
+    elif [[ ${name2} == e_coli* ]]; then
+        genus="Escherichia"
+    elif [[ ${name2} == b_pullorum* ]]; then
+        genus="Bifidobacterium"
+    fi
+
+    if [[ ${name2} == *r1 ]]; then
+        technical_replicate="replicate_1"
+    elif [[ ${name2} == *r2 ]]; then
+        technical_replicate="replicate_2"
+    elif [[ ${name2} == *r3 ]]; then
+        technical_replicate="replicate_3"
+    fi
+
+    if [[ ${name2} == *mock_1* ]]; then
+        mock_type="mock_1"
+    elif [[ ${name2} == *mock_2* ]]; then
+        mock_type="mock_2"
+    fi
+
+    if [[ ${name2} == *ligation* ]]; then
+        sequencing_kit="Ligation_kit"
+    elif [[ ${name2} == *rapid* ]]; then
+        sequencing_kit="Rapid_kit"
+    fi
+
+    primary_percentage=$(samtools flagstat $file -O tsv | grep "mapped %" | awk -F "\t" '$3=="primary mapped %"{print $1}' | sed 's/%//')
+    percentage=$(samtools flagstat $file -O tsv | grep "mapped %" | awk -F "\t" '$3!="primary mapped %"{print $1}' | sed 's/%//')
+    echo -e "$sample_id\t$sequencing_kit\t$mock_type\t$genus\t$technical_replicate\t$percentage\t$primary_percentage" >> $minimap2_percentage/mock_seq_bias_stat_read_primary_bam.tsv
+done
+
+echo "Jod id is: $SLURM_JOBID"

@@ -1,0 +1,72 @@
+#!/bin/bash -l
+#SBATCH --job-name="mock_ligation_rapid_fastq_minimap2"
+#SBATCH --array=1-3
+#SBATCH -o mock_ligation_rapid_fastq_minimap2.o
+#SBATCH -e mock_ligation_rapid_fastq_minimap2.e
+
+#########################################################
+e_coli_ref=/path/GCF_000008865.2_ASM886v2_genomic.fna
+l_acidophilus_ref=/path/GCF_003047065.1_ASM304706v1_genomic.fna
+b_pullorum_ref=/path/GCF_004135085.1_ASM413508v1_genomic.fna
+
+nanofilt=/path/
+
+e_coli_minimap2=/path/
+e_coli_minimap2_primary=/path/
+e_coli_primary_fastq=/path/
+
+l_acidophilus_minimap2=/path/
+l_acidophilus_minimap2_primary=/path/
+l_acidophilus_primary_fastq=/path/
+
+b_pullorum_minimap2=/path/
+b_pullorum_minimap2_primary=/path/
+b_pullorum_primary_fastq=/path/
+
+#########################################################
+module load anaconda3
+module load samtools
+
+#########################################################
+### extract fastq with methylation tag
+source activate minimap2
+
+for i in {1..2}; do
+	minimap2 -y -ax lr:hq $e_coli_ref $nanofilt/mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.fastq -t 4 -o $e_coli_minimap2/e_coli_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.bam
+	minimap2 -y -ax lr:hq $l_acidophilus_ref $nanofilt/mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.fastq -t 4 -o $l_acidophilus_minimap2/l_acidophilus_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.bam
+	minimap2 -y -ax lr:hq $b_pullorum_ref $nanofilt/mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.fastq -t 4 -o $b_pullorum_minimap2/b_pullorum_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.bam
+done
+
+for i in {1..2}; do
+	minimap2 -y -ax lr:hq $e_coli_ref $nanofilt/mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.fastq -t 4 -o $e_coli_minimap2/e_coli_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.bam
+	minimap2 -y -ax lr:hq $l_acidophilus_ref $nanofilt/mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.fastq -t 4 -o $l_acidophilus_minimap2/l_acidophilus_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.bam
+	minimap2 -y -ax lr:hq $b_pullorum_ref $nanofilt/mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.fastq -t 4 -o $b_pullorum_minimap2/b_pullorum_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.bam
+done
+
+##############################################################
+## extract primary mapped bam
+for i in {1..2}; do
+	samtools view -F 0x900 -F 4 -bhS $e_coli_minimap2/e_coli_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.bam > $e_coli_minimap2_primary/e_coli_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}_primary.bam
+	samtools view -F 0x900 -F 4 -bhS $l_acidophilus_minimap2/l_acidophilus_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.bam > $l_acidophilus_minimap2_primary/l_acidophilus_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}_primary.bam
+	samtools view -F 0x900 -F 4 -bhS $b_pullorum_minimap2/b_pullorum_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.bam > $b_pullorum_minimap2_primary/b_pullorum_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}_primary.bam
+done
+
+for i in {1..2}; do
+	samtools view -F 0x900 -F 4 -bhS $e_coli_minimap2/e_coli_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.bam > $e_coli_minimap2_primary/e_coli_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}_primary.bam
+	samtools view -F 0x900 -F 4 -bhS $l_acidophilus_minimap2/l_acidophilus_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.bam > $l_acidophilus_minimap2_primary/l_acidophilus_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}_primary.bam
+	samtools view -F 0x900 -F 4 -bhS $b_pullorum_minimap2/b_pullorum_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.bam > $b_pullorum_minimap2_primary/b_pullorum_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}_primary.bam
+done
+
+##############################################################
+## extract primary mapped reads to fastq
+for i in {1..2}; do
+	samtools fastq $e_coli_minimap2_primary/e_coli_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}_primary.bam > $e_coli_primary_fastq/e_coli_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.fastq
+	samtools fastq $l_acidophilus_minimap2_primary/l_acidophilus_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}_primary.bam > $l_acidophilus_primary_fastq/l_acidophilus_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.fastq
+	samtools fastq $b_pullorum_minimap2_primary/b_pullorum_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}_primary.bam > $b_pullorum_primary_fastq/b_pullorum_mock_${i}_ligation_r${SLURM_ARRAY_TASK_ID}.fastq
+done
+
+for i in {1..2}; do
+	samtools fastq $e_coli_minimap2_primary/e_coli_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}_primary.bam > $e_coli_primary_fastq/e_coli_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.fastq
+	samtools fastq $l_acidophilus_minimap2_primary/l_acidophilus_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}_primary.bam > $l_acidophilus_primary_fastq/l_acidophilus_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.fastq
+	samtools fastq $b_pullorum_minimap2_primary/b_pullorum_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}_primary.bam > $b_pullorum_primary_fastq/b_pullorum_mock_${i}_rapid_r${SLURM_ARRAY_TASK_ID}.fastq
+done

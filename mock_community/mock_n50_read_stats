@@ -1,0 +1,58 @@
+#!/bin/bash -l
+#SBATCH --job-name="mock_n50_read_stats"
+#SBATCH -o mock_n50_read_stats.o
+#SBATCH -e mock_n50_read_stats.e
+
+#########################################################
+primary_fastq_all=/path/
+stat_dir=/path/
+
+#########################################################
+module load anaconda3
+module load samtools
+
+#########################################################
+#### stats for fastq
+source activate seqkit
+
+echo -e "sample_id\tmock_type\tsequencing_kit\tgenus\ttechnical_replicate\tn50" > $stat_dir/mock_seq_n50_stat.tsv
+
+for file in $primary_fastq_all/*.fastq; do
+    name1=${file##*/}
+    name2=${name1%%.*}
+    name3=${name2%%_r*}
+
+    sample_id=${name2}
+
+    if [[ ${name2} == l_acidophilus* ]]; then
+        genus="Lactobacillus"
+    elif [[ ${name2} == e_coli* ]]; then
+        genus="Escherichia"
+    elif [[ ${name2} == b_pullorum* ]]; then
+        genus="Bifidobacterium"
+    fi
+
+    if [[ ${name2} == *r1 ]]; then
+        technical_replicate="replicate_1"
+    elif [[ ${name2} == *r2 ]]; then
+        technical_replicate="replicate_2"
+    elif [[ ${name2} == *r3 ]]; then
+        technical_replicate="replicate_3"
+    fi
+
+    if [[ ${name2} == *mock_1* ]]; then
+        mock_type="mock_1"
+    elif [[ ${name2} == *mock_2* ]]; then
+        mock_type="mock_2"
+    fi
+
+    if [[ ${name2} == *ligation* ]]; then
+        sequencing_kit="Ligation_kit"
+    elif [[ ${name2} == *rapid* ]]; then
+        sequencing_kit="Rapid_kit"
+    fi
+
+    nanofilt_n50_value=$(seqkit stats $file -a | awk 'NR==2 {print $13}')
+    
+    echo -e "$sample_id\t$mock_type\t$sequencing_kit\t$genus\t$technical_replicate\t$nanofilt_n50_value" >> $stat_dir/mock_seq_n50_stat.tsv
+done
