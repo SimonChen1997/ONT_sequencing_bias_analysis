@@ -27,4 +27,4 @@ Scripts in the *methylation* folder includes all codes for this analysis.
 Scripts in the *mock_community* folder includes all codes for this analysis.
 <br/><br/>
 
-**✨If you are using the method in this repository, please cite our paper:***
+**✨If you are using the method in this repository, please cite our paper:**
