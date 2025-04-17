@@ -20,3 +20,7 @@ Scripts in the *microbiome* folder contains all codes for this analysis.
 **Section 4️⃣: bacterial DNA methylation profile divergence:**
 
 Scripts in the *methylation* folder includes all codes for this analysis.
+<br/><br/>
+
+**Section 5️⃣: mock community profile divergence:**
+Scripts in the *mock_community* folder includes all codes for this analysis.
