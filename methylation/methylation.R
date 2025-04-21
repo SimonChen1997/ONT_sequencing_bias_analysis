@@ -238,16 +238,6 @@ disctinct_boxplot_es <- ggplot(merged_distinct_statistic[merged_distinct_statist
 ##########################################################################################################
 ### fisher's exact test
 ##########################################################################################################
-contingency_table_1 <- matrix(c(314,1005,697, 0), nrow = 2)
-fisher.test(contingency_table_1, alternative = "less")
-
-
-contingency_table_2 <- matrix(c(1848,3135,1912, 0), nrow = 2)
-fisher.test(contingency_table_2, alternative = "less")
-
-contingency_table_3 <- matrix(c(6424,2229,1881, 0), nrow = 2)
-fisher.test(contingency_table_3, alternative = "less")
-
 contingency_table_1 <- matrix(c(314,1005,697, 1996346), nrow = 2)
 fisher.test(contingency_table_1, alternative = "greater")
 
