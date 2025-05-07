@@ -28,3 +28,5 @@ Scripts in the *mock_community* folder includes all codes for this analysis.
 <br/><br/>
 
 **✨If you are using the method in this repository, please cite our paper:**
+
+Biases from Oxford Nanopore library preparation kits and their effects on microbiome and genome analysis
